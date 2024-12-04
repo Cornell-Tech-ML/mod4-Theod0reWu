@@ -90,9 +90,36 @@ def _tensor_conv1d(
     s1 = input_strides
     s2 = weight_strides
 
-    # TODO: Implement for Task 4.1.
-    raise NotImplementedError("Need to implement for Task 4.1")
+    for out_flat_idx in prange(len(out)):
+        out_index = np.empty(MAX_DIMS, np.int32)
+        to_index(out_flat_idx, out_shape, out_index)
 
+        batch_idx = out_index[0]
+        out_channel_idx = out_index[1]
+        out_width_idx = out_index[2]
+
+        weight_idx = np.empty(MAX_DIMS, np.int32)
+        weight_idx[0] = out_channel_idx
+        
+        in_idx = np.empty(MAX_DIMS, np.int32)
+        in_idx[0] = batch_idx
+
+        out[out_flat_idx] = 0.0
+        for in_channel_idx in range(in_channels):
+            in_idx[1] = in_channel_idx
+            weight_idx[1] = in_channel_idx
+            for k in range(kw):
+                in_idx[2] = out_width_idx + k
+                weight_idx[2] = k
+                if (reverse):
+                    in_idx[2] = out_width_idx - k
+                    weight_idx[2] = kw - k - 1
+                if (in_idx[2] >= width or in_idx[2] < 0):
+                    continue
+
+                input_flat_idx = index_to_position(in_idx, s1)
+                weight_flax_idx = index_to_position(weight_idx, s2)
+                out[out_flat_idx] += input[input_flat_idx] * weight[weight_flax_idx]
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
 
@@ -219,8 +246,46 @@ def _tensor_conv2d(
     s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
     s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
-    # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    for out_flat_idx in prange(len(out)):
+        out_index = np.empty(MAX_DIMS, np.int32)
+        to_index(out_flat_idx, out_shape, out_index)
+
+        batch_idx = out_index[0]
+        out_channel_idx = out_index[1]
+        out_height_idx = out_index[2]
+        out_width_idx = out_index[3]
+
+        weight_idx = np.empty(MAX_DIMS, np.int32)
+        weight_idx[0] = out_channel_idx
+        
+        in_idx = np.empty(MAX_DIMS, np.int32)
+        in_idx[0] = batch_idx
+
+        out[out_flat_idx] = 0.0
+        for in_channel_idx in range(in_channels):
+            in_idx[1] = in_channel_idx
+            weight_idx[1] = in_channel_idx
+            for h in range(kh):
+                in_idx[2] = out_height_idx + h
+                weight_idx[2] = h
+                if (reverse):
+                    in_idx[2] = out_height_idx - h
+                    weight_idx[2] = kh - h - 1
+                if (in_idx[2] >= height or in_idx[2] < 0):
+                    continue
+
+                for w in range(kw):
+                    in_idx[3] = out_width_idx + w
+                    weight_idx[3] = w
+                    if (reverse):
+                        in_idx[3] = out_width_idx - w
+                        weight_idx[3] = kw - w - 1
+                    if (in_idx[3] >= width or in_idx[3] < 0):
+                        continue
+
+                    input_flat_idx = index_to_position(in_idx, s1)
+                    weight_flax_idx = index_to_position(weight_idx, s2)
+                    out[out_flat_idx] += input[input_flat_idx] * weight[weight_flax_idx]
 
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
