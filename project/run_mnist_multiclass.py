@@ -1,6 +1,7 @@
 from mnist import MNIST
 
 import minitorch
+from torch import max_pool2d
 
 mndata = MNIST("project/data/")
 images, labels = mndata.load_training()
@@ -41,8 +42,7 @@ class Conv2d(minitorch.Module):
         self.bias = RParam(out_channels, 1, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        return minitorch.Conv2dFun.apply(input, self.weights.value) + self.bias.value
 
 
 class Network(minitorch.Module):
@@ -64,15 +64,22 @@ class Network(minitorch.Module):
         super().__init__()
 
         # For vis
-        self.mid = None
-        self.out = None
+        self.mid = Conv2d(1, 4, 3, 3)
+        self.out = Conv2d(4, 8, 3, 3)
+        self.first = Linear(392, 64)
+        self.second = Linear(64, 10)
 
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
 
     def forward(self, x):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        BATCH, _, _, _ = x.shape
+        t = self.mid.forward(x).relu()
+        t = self.out.forward(t).relu()
+        t = minitorch.maxpool2d(t, (4,4))
+        t = t.view(BATCH, 392)
+        t = self.first.forward(t).relu()
+        t = minitorch.dropout(t, .25)
+        t = self.second.forward(t)
+        return minitorch.logsoftmax(t, dim=1)
 
 
 def make_mnist(start, stop):

@@ -64,7 +64,7 @@ def eq(a: float, b: float) -> float:
 
 def max(a: float, b: float) -> float:
     """Returns the larger of a and b"""
-    return b if lt(a, b) else a
+    return b if a < b else a
 
 
 def is_close(a: float, b: float) -> float:
