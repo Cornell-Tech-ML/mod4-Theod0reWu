@@ -19,6 +19,7 @@ def test_conv1d_simple() -> None:
     assert out[0, 0, 2] == 2 * 1 + 3 * 2
     assert out[0, 0, 3] == 3 * 1
 
+
 @pytest.mark.task4_1
 @given(tensors(shape=(1, 1, 6)), tensors(shape=(1, 1, 4)))
 def test_conv1d(input: Tensor, weight: Tensor) -> None:

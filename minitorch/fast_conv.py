@@ -8,7 +8,6 @@ from .autodiff import Context
 from .tensor import Tensor
 from .tensor_data import (
     MAX_DIMS,
-    Index,
     Shape,
     Strides,
     Storage,
@@ -100,7 +99,7 @@ def _tensor_conv1d(
 
         weight_idx = np.empty(MAX_DIMS, np.int32)
         weight_idx[0] = out_channel_idx
-        
+
         in_idx = np.empty(MAX_DIMS, np.int32)
         in_idx[0] = batch_idx
 
@@ -111,15 +110,16 @@ def _tensor_conv1d(
             for k in range(kw):
                 in_idx[2] = out_width_idx + k
                 weight_idx[2] = k
-                if (reverse):
+                if reverse:
                     in_idx[2] = out_width_idx - k
                     weight_idx[2] = kw - k - 1
-                if (in_idx[2] >= width or in_idx[2] < 0):
+                if in_idx[2] >= width or in_idx[2] < 0:
                     continue
 
                 input_flat_idx = index_to_position(in_idx, s1)
                 weight_flax_idx = index_to_position(weight_idx, s2)
                 out[out_flat_idx] += input[input_flat_idx] * weight[weight_flax_idx]
+
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
 
@@ -132,12 +132,12 @@ class Conv1dFun(Function):
         Args:
         ----
             ctx : Context
-            input : batch x in_channel x h x w
-            weight : out_channel x in_channel x kh x kw
+            input : batch x in_channel x w
+            weight : out_channel x in_channel x kw
 
         Returns:
         -------
-            batch x out_channel x h x w
+            batch x out_channel x w
 
         """
         ctx.save_for_backward(input, weight)
@@ -257,7 +257,7 @@ def _tensor_conv2d(
 
         weight_idx = np.empty(MAX_DIMS, np.int32)
         weight_idx[0] = out_channel_idx
-        
+
         in_idx = np.empty(MAX_DIMS, np.int32)
         in_idx[0] = batch_idx
 
@@ -268,19 +268,19 @@ def _tensor_conv2d(
             for h in range(kh):
                 in_idx[2] = out_height_idx + h
                 weight_idx[2] = h
-                if (reverse):
+                if reverse:
                     in_idx[2] = out_height_idx - h
                     weight_idx[2] = kh - h - 1
-                if (in_idx[2] >= height or in_idx[2] < 0):
+                if in_idx[2] >= height or in_idx[2] < 0:
                     continue
 
                 for w in range(kw):
                     in_idx[3] = out_width_idx + w
                     weight_idx[3] = w
-                    if (reverse):
+                    if reverse:
                         in_idx[3] = out_width_idx - w
                         weight_idx[3] = kw - w - 1
-                    if (in_idx[3] >= width or in_idx[3] < 0):
+                    if in_idx[3] >= width or in_idx[3] < 0:
                         continue
 
                     input_flat_idx = index_to_position(in_idx, s1)

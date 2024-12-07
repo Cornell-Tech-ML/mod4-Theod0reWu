@@ -239,7 +239,7 @@ def tensor_zip(
 
 
 def _sum_practice(out: Storage, a: Storage, size: int) -> None:
-    """This is a practice sum kernel to prepare for reduce.
+    r"""This is a practice sum kernel to prepare for reduce.
 
     Given an array of length $n$ and out of size $n // \\text{blockDIM}$
     it should sum up each blockDim values into an out cell.

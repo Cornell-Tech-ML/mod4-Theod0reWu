@@ -198,6 +198,7 @@ class Exp(Function):
         (exp,) = ctx.saved_values
         return exp.f.mul_zip(exp, grad_output)
 
+
 class Max(Function):
     @staticmethod
     def forward(ctx: Context, a: Tensor, dim: Tensor) -> Tensor:
@@ -211,6 +212,7 @@ class Max(Function):
         """Backward pass for max."""
         (is_max,) = ctx.saved_values
         return grad_output * is_max, tensor([0.0])
+
 
 class Sum(Function):
     @staticmethod
@@ -353,6 +355,7 @@ class MatMul(Function):
             grad_output.f.matrix_multiply(grad_output, transpose(t2)),
             grad_output.f.matrix_multiply(transpose(t1), grad_output),
         )
+
 
 # Helpers for Constructing tensors
 def zeros(shape: UserShape, backend: TensorBackend = SimpleBackend) -> Tensor:

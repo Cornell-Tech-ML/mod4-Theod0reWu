@@ -1,10 +1,7 @@
 from typing import Tuple
 
-from . import operators
-from .autodiff import Context
-from .fast_ops import FastOps
 from .tensor import Tensor
-from .tensor_functions import Function, rand, tensor
+from .tensor_functions import rand
 
 
 # List of functions in this file:
@@ -37,38 +34,50 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     assert width % kw == 0
 
     new_height, new_width = height // kh, width // kw
-    t = input.contiguous().view(batch, channel, new_height, kh,  new_width, kw)
-    return t.permute(0, 1, 2, 4, 3, 5).contiguous().view(batch, channel, new_height, new_width, kw * kh), new_height, new_width
+    t = input.contiguous().view(batch, channel, new_height, kh, new_width, kw)
+    return (
+        t.permute(0, 1, 2, 4, 3, 5)
+        .contiguous()
+        .view(batch, channel, new_height, new_width, kw * kh),
+        new_height,
+        new_width,
+    )
 
 
 # TODO: Implement for Task 4.3.
 
+
 def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
-    """"Computes average pooling given an input tensor and a kernel size"""
+    """ "Computes average pooling given an input tensor and a kernel size"""
     batch, channel, height, width = input.shape
-    new_tensor, a, b = tile(input, kernel)  
+    new_tensor, a, b = tile(input, kernel)
     return new_tensor.mean(dim=4).view(batch, channel, a, b)
+
 
 # For max see tensor.py, tensor_ops.py and tensor_functions.py
 
+
 def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
-    """"Computes max pooling given an input tensor and a kernel size"""
+    """ "Computes max pooling given an input tensor and a kernel size"""
     batch, channel, height, width = input.shape
-    new_tensor, a, b = tile(input, kernel)  
+    new_tensor, a, b = tile(input, kernel)
     return new_tensor.max(dim=4).view(batch, channel, a, b)
+
 
 def dropout(input: Tensor, p: float, ignore: bool = False) -> Tensor:
     """Dropout for a given probability"""
-    if (ignore):
+    if ignore:
         return input
     return input * (rand(input.shape, input.backend) > p)
 
-def softmax(input: Tensor, dim = None) -> Tensor:
+
+def softmax(input: Tensor, dim=None) -> Tensor:
     """Applies the softmax to the input tensor along the given dimension"""
     exp = input.exp()
     return exp / exp.sum(dim)
 
-def logsoftmax(input: Tensor, dim = None) -> Tensor:
+
+def logsoftmax(input: Tensor, dim=None) -> Tensor:
     """Applies the log of the softmax to the input tensor along the given dimension"""
     exp = input.exp()
     return (exp / exp.sum(dim)).log()

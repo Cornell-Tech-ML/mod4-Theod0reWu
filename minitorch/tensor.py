@@ -387,7 +387,7 @@ class Tensor:
             return Sum.apply(self.contiguous().view(self.size), self._ensure_tensor(0))
         else:
             return Sum.apply(self, self._ensure_tensor(dim))
-    
+
     def max(self, dim: Optional[int] = None) -> Tensor:
         """Return a new tensor with the max of the input tensor along the given dimension."""
         if dim is None:

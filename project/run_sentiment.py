@@ -3,6 +3,7 @@ import random
 import embeddings
 
 import minitorch
+
 from datasets import load_dataset
 
 BACKEND = minitorch.TensorBackend(minitorch.FastOps)
@@ -37,7 +38,6 @@ class Conv1d(minitorch.Module):
         return minitorch.Conv1dFun.apply(input, self.weights.value) + self.bias.value
 
 
-
 class CNNSentimentKim(minitorch.Module):
     """
     Implement a CNN for Sentiment classification based on Y. Kim 2014.
@@ -56,20 +56,31 @@ class CNNSentimentKim(minitorch.Module):
         self,
         feature_map_size=100,
         embedding_size=50,
-        filter_sizes=[3, 4, 5],
+        # filter_sizes=[3, 4, 5],
+        filter_sizes = [3, 4, 5],
         dropout=0.25,
     ):
         super().__init__()
         self.feature_map_size = feature_map_size
-        
-        self.conv = Conv1d(embedding_size, feature_map_size, (3, 4, 5))
+        self.dropout = dropout
+
+        self.convs = [Conv1d(embedding_size, feature_map_size, i) for i in filter_sizes]
+        self.linear = Linear(feature_map_size, 1)
 
     def forward(self, embeddings):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        batch_size, _, _ = embeddings.shape
+        x = embeddings.permute(0,2,1)
+        conv_outs = [c.forward(x).relu() for c in self.convs]
+        pooled = [c.max(dim = 2).view(batch_size, self.feature_map_size) for c in conv_outs]
+        total = pooled[0]
+        for e in pooled[1:]:
+            total += e
+        t = self.linear(total).relu()
+        t = minitorch.dropout(t, self.dropout)
+        return t.sigmoid()
 
 
 # Evaluation helper methods
@@ -253,9 +264,9 @@ def encode_sentiment_data(dataset, pretrained_embeddings, N_train, N_val=0):
 
 
 if __name__ == "__main__":
-    train_size = 450
+    train_size = 1000 # 450
     validation_size = 100
-    learning_rate = 0.01
+    learning_rate = 1e-9 # 0.01
     max_epochs = 250
 
     (X_train, y_train), (X_val, y_val) = encode_sentiment_data(
@@ -270,6 +281,7 @@ if __name__ == "__main__":
     model_trainer.train(
         (X_train, y_train),
         learning_rate,
+        batch_size=50,
         max_epochs=max_epochs,
         data_val=(X_val, y_val),
     )
