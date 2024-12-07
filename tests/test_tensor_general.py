@@ -21,7 +21,7 @@ one_arg, two_arg, red_arg = MathTestVariable._comp_testing()
 
 SimpleBackend = minitorch.TensorBackend(minitorch.SimpleOps)
 FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
-shared: Dict[str, TensorBackend] = {"fast": FastTensorBackend}
+shared: Dict[str, TensorBackend] = {"fast": FastTensorBackend, "simple": SimpleBackend}
 
 # ## Task 3.1
 backend_tests = [pytest.param("fast", marks=pytest.mark.task3_1)]
@@ -38,6 +38,11 @@ if numba.cuda.is_available():
     matmul_tests.append(pytest.param("cuda", marks=pytest.mark.task3_4))
     shared["cuda"] = minitorch.TensorBackend(minitorch.CudaOps)
 
+include_simple = False
+if include_simple:
+    # Include SimpleBackend in tests
+    backend_tests.append(pytest.param("simple", marks=pytest.mark.task3_1))
+    matmul_tests.append(pytest.param("simple", marks=pytest.mark.task3_2))
 
 # ## Task 3.1 and 3.3
 
@@ -49,6 +54,40 @@ def test_create(backend: str, t1: List[float]) -> None:
     t2 = minitorch.tensor(t1, backend=shared[backend])
     for i in range(len(t1)):
         assert t1[i] == t2[i]
+
+
+@given(data())
+@settings(max_examples=100)
+@pytest.mark.parametrize("backend", backend_tests)
+@pytest.mark.inv
+def test_inv(
+    backend: str,
+    data: DataObject,
+) -> None:
+    """Run forward for all one arg functions above."""
+    t1 = data.draw(tensors(backend=shared[backend]))
+    # print(t1)
+    t2 = -t1
+    for ind in t2._tensor.indices():
+        # print("idx:", ind, "mine|correct:", t2[ind], "|" , -t1[ind], "input:", t1[ind])
+        assert_close(t2[ind], -t1[ind])
+
+
+@given(data())
+@settings(max_examples=100)
+@pytest.mark.parametrize("backend", backend_tests)
+@pytest.mark.add_const
+def test_add_constant(
+    backend: str,
+    data: DataObject,
+) -> None:
+    """Run forward for all one arg functions above."""
+    t1 = data.draw(tensors(backend=shared[backend]))
+    # print(t1)
+    t2 = t1 + 5
+    for ind in t2._tensor.indices():
+        # print("idx:", ind, "mine|correct:", t2[ind], "|" , t1[ind] + 5, "input:", t1[ind])
+        assert_close(t2[ind], t1[ind] + 5)
 
 
 @given(data())
@@ -65,6 +104,7 @@ def test_one_args(
     name, base_fn, tensor_fn = fn
     t2 = tensor_fn(t1)
     for ind in t2._tensor.indices():
+        # print(t1[ind], t2[ind], base_fn(t1[ind]))
         assert_close(t2[ind], base_fn(t1[ind]))
 
 
@@ -131,7 +171,19 @@ def test_reduce(
 
 if numba.cuda.is_available():
 
+    @pytest.mark.sum_practice_mine
+    def test_sum_practice_mine() -> None:
+        x = [i for i in range(16)]
+        b = minitorch.tensor(x)
+        s = b.sum()[0]
+        print(b, s)
+        b2 = minitorch.tensor(x, backend=shared["cuda"])
+        out = minitorch.sum_practice(b2)
+        print(out)
+        assert_close(s, out._storage[0])
+
     @pytest.mark.task3_3
+    @pytest.mark.sum_practice
     def test_sum_practice() -> None:
         x = [random.random() for i in range(16)]
         b = minitorch.tensor(x)
@@ -141,6 +193,7 @@ if numba.cuda.is_available():
         assert_close(s, out._storage[0])
 
     @pytest.mark.task3_3
+    @pytest.mark.sum_practice
     def test_sum_practice2() -> None:
         x = [random.random() for i in range(64)]
         b = minitorch.tensor(x)
@@ -150,6 +203,7 @@ if numba.cuda.is_available():
         assert_close(s, out._storage[0] + out._storage[1])
 
     @pytest.mark.task3_3
+    @pytest.mark.sum_practice
     def test_sum_practice3() -> None:
         x = [random.random() for i in range(48)]
         b = minitorch.tensor(x)
@@ -158,7 +212,18 @@ if numba.cuda.is_available():
         out = minitorch.sum_practice(b2)
         assert_close(s, out._storage[0] + out._storage[1])
 
+    @pytest.mark.sum_mine
+    def test_sum_mine() -> None:
+        x = [i for i in range(32)]
+        b = minitorch.tensor(x)
+        s = b.sum()[0]
+        b2 = minitorch.tensor(x, backend=shared["cuda"])
+        out = b2.sum(0)
+        print(x, s, out[0])
+        assert_close(s, out[0])
+
     @pytest.mark.task3_3
+    @pytest.mark.sum
     def test_sum_practice4() -> None:
         x = [random.random() for i in range(32)]
         b = minitorch.tensor(x)
@@ -168,6 +233,7 @@ if numba.cuda.is_available():
         assert_close(s, out[0])
 
     @pytest.mark.task3_3
+    @pytest.mark.sum
     def test_sum_practice5() -> None:
         x = [random.random() for i in range(500)]
         b = minitorch.tensor(x)
@@ -177,6 +243,7 @@ if numba.cuda.is_available():
         assert_close(s, out[0])
 
     @pytest.mark.task3_3
+    @pytest.mark.sum
     def test_sum_practice_other_dims() -> None:
         x = [[random.random() for i in range(32)] for j in range(16)]
         b = minitorch.tensor(x)
@@ -216,6 +283,24 @@ if numba.cuda.is_available():
             for j in range(32):
                 assert_close(z[i, j], z2._storage[32 * i + j])
 
+    @pytest.mark.mul_mine
+    def test_mul_mine() -> None:
+        x1 = [[i for i in range(2)] for j in range(2)]
+        y1 = [[i for i in range(2)] for j in range(2)]
+        z = minitorch.tensor(x1, backend=shared["fast"]) @ minitorch.tensor(
+            y1, backend=shared["fast"]
+        )
+        print("Correct:", z)
+
+        x = minitorch.tensor(x1, backend=shared["cuda"])
+        y = minitorch.tensor(y1, backend=shared["cuda"])
+        z2 = x @ y
+
+        print("Mine:", z2)
+        for i in range(2):
+            for j in range(2):
+                assert_close(z[i, j], z2[i, j])
+
     @pytest.mark.task3_4
     def test_mul_practice3() -> None:
         """Small real example"""
@@ -233,9 +318,28 @@ if numba.cuda.is_available():
             for j in range(2):
                 assert_close(z[i, j], z2[i, j])
 
+    def test_mul_practice_mine() -> None:
+        """Extend to require 2 blocks"""
+        numba.cuda.profiling()
+        size = 33
+        x1 = [[i for i in range(size)] for j in range(size)]
+        y1 = [[i for i in range(size)] for j in range(size)]
+        z = minitorch.tensor(x1, backend=shared["fast"]) @ minitorch.tensor(
+            y1, backend=shared["fast"]
+        )
+
+        x = minitorch.tensor(x1, backend=shared["cuda"])
+        y = minitorch.tensor(y1, backend=shared["cuda"])
+        z2 = x @ y
+
+        for i in range(size):
+            for j in range(size):
+                assert_close(z[i, j], z2[i, j])
+
     @pytest.mark.task3_4
     def test_mul_practice4() -> None:
         """Extend to require 2 blocks"""
+        numba.cuda.profiling()
         size = 33
         x1 = [[random.random() for i in range(size)] for j in range(size)]
         y1 = [[random.random() for i in range(size)] for j in range(size)]
@@ -306,7 +410,7 @@ if numba.cuda.is_available():
 
 
 @given(data())
-@settings(max_examples=25)
+@settings(max_examples=26)
 @pytest.mark.parametrize("fn", two_arg)
 @pytest.mark.parametrize("backend", backend_tests)
 def test_two_grad_broadcast(

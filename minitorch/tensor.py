@@ -30,6 +30,7 @@ from .tensor_functions import (
     Sigmoid,
     Sum,
     View,
+    Max,
     tensor,
 )
 
@@ -95,9 +96,11 @@ class Tensor:
         self.f = backend
 
     def requires_grad_(self, x: bool) -> None:
+        """Sets whether this tensor requires gradients."""
         self.history = History()
 
     def requires_grad(self) -> bool:
+        """Returns whether this tensor requires gradients."""
         return self.history is not None
 
     def to_numpy(self) -> npt.NDArray[np.float64]:
@@ -194,6 +197,8 @@ class Tensor:
         # END CODE CHANGE (2021)
 
     def zeros(self, shape: Optional[UserShape] = None) -> Tensor:
+        """Create a tensor of zeros with the same shape as self."""
+
         def zero(shape: UserShape) -> Tensor:
             return Tensor.make(
                 [0.0] * int(operators.prod(shape)), shape, backend=self.backend
@@ -239,14 +244,17 @@ class Tensor:
         return self.history is not None and self.history.last_fn is None
 
     def is_constant(self) -> bool:
+        """True if this variable was created by a constant function (no `last_fn`)"""
         return self.history is None
 
     @property
     def parents(self) -> Iterable[Variable]:
+        """Returns parents of this variable"""
         assert self.history is not None
         return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """Returns gradients of this variable with respect to its parents."""
         h = self.history
         assert h is not None
         assert h.last_fn is not None
@@ -260,6 +268,7 @@ class Tensor:
         ]
 
     def backward(self, grad_output: Optional[Tensor] = None) -> None:
+        """Backpropagation from the output to this variable."""
         if grad_output is None:
             assert self.shape == (1,), "Must provide grad_output if non-scalar"
             grad_output = Tensor.make([1.0], (1,), backend=self.backend)
@@ -284,4 +293,112 @@ class Tensor:
         return self._tensor.shape
 
     # Functions
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # TODO: Implement for Task 2.3.
+
+    @property
+    def dims(self) -> int:
+        """Returns
+        number of dimensions of the tensor
+        """
+        return self._tensor.dims
+
+    @property
+    def size(self) -> int:
+        """Returns
+        total number of elements in the tensor
+        """
+        return self._tensor.size
+
+    def permute(self, *order: int) -> Tensor:
+        """Permute the tensor's dimensions"""
+        return Permute.apply(self, tensor(list(order)))
+
+    def __add__(self, b: TensorLike) -> Tensor:
+        return Add.apply(self, self._ensure_tensor(b))
+
+    def __radd__(self, b: TensorLike) -> Tensor:
+        return Add.apply(self._ensure_tensor(b), self)
+
+    def __sub__(self, b: TensorLike) -> Tensor:
+        return Add.apply(self, -self._ensure_tensor(b))
+
+    def __rsub__(self, b: TensorLike) -> Tensor:
+        return Neg.apply(self).__add__(self._ensure_tensor(b))
+
+    def __mul__(self, b: TensorLike) -> Tensor:
+        return Mul.apply(self, self._ensure_tensor(b))
+
+    def __rmul__(self, b: TensorLike) -> Tensor:
+        return Mul.apply(self._ensure_tensor(b), self)
+
+    def __lt__(self, b: TensorLike) -> Tensor:
+        return LT.apply(self, self._ensure_tensor(b))
+
+    def __eq__(self, b: TensorLike) -> Tensor:
+        return EQ.apply(self, self._ensure_tensor(b))
+
+    def __gt__(self, b: TensorLike) -> Tensor:
+        return LT.apply(self._ensure_tensor(b), self)
+
+    def __neg__(self) -> Tensor:
+        return Neg.apply(self)
+
+    NoneDim = -1
+
+    def all(self, dim: int | None = None) -> Tensor:
+        """Return a new tensor with 1 if all elements are True along the given dimension."""
+        if dim is None:
+            return All.apply(
+                # self, Tensor.make([Tensor.NoneDim], (1,), backend=self.backend)
+                self.view(self.size),
+                self._ensure_tensor(0),
+            )
+        return All.apply(self, self._ensure_tensor(dim))
+
+    def is_close(self, y: Tensor) -> Tensor:
+        """Return a new tensor with 1 if all elements are close to the corresponding elements in `b`."""
+        return IsClose.apply(self, y)
+
+    def sigmoid(self) -> Tensor:
+        """Return a new tensor with the sigmoid of the input tensor."""
+        return Sigmoid.apply(self)
+
+    def relu(self) -> Tensor:
+        """Return a new tensor with the ReLU (Rectified Linear Unit) of the input tensor."""
+        return ReLU.apply(self)
+
+    def log(self) -> Tensor:
+        """Return a new tensor with the natural logarithm of the input tensor."""
+        return Log.apply(self)
+
+    def exp(self) -> Tensor:
+        """Return a new tensor with the exponential of the input tensor."""
+        return Exp.apply(self)
+
+    def mean(self, dim: int | None = None) -> Tensor:
+        """Return a new tensor with the mean of the input tensor along the given dimension."""
+        if dim is not None:
+            return self.sum(dim) / self.shape[dim]
+        return self.sum(dim) / self.size
+
+    def sum(self, dim: Optional[int] = None) -> Tensor:
+        """Return a new tensor with the sum of the input tensor along the given dimension."""
+        if dim is None:
+            return Sum.apply(self.contiguous().view(self.size), self._ensure_tensor(0))
+        else:
+            return Sum.apply(self, self._ensure_tensor(dim))
+
+    def max(self, dim: Optional[int] = None) -> Tensor:
+        """Return a new tensor with the max of the input tensor along the given dimension."""
+        if dim is None:
+            return Max.apply(self.contiguous().view(self.size), self._ensure_tensor(0))
+        else:
+            return Max.apply(self, self._ensure_tensor(dim))
+
+    def view(self, *order: int) -> Tensor:
+        """Return a new tensor with the same data as the input tensor but with the specified shape."""
+        return View.apply(self, tensor(list(order)))
+
+    def zero_grad_(self) -> None:
+        """Set all gradients to zero."""
+        self.grad = None

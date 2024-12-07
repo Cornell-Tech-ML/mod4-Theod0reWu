@@ -2,7 +2,7 @@ import pytest
 from hypothesis import given
 
 import minitorch
-from minitorch import Tensor
+from minitorch import Tensor, tensor
 
 from .strategies import assert_close
 from .tensor_strategies import tensors
@@ -31,8 +31,28 @@ def test_avg(t: Tensor) -> None:
 @pytest.mark.task4_4
 @given(tensors(shape=(2, 3, 4)))
 def test_max(t: Tensor) -> None:
-    # TODO: Implement for Task 4.4.
-    raise NotImplementedError("Need to implement for Task 4.4")
+    ## check reduce over all for max
+    # shape (3, 2)
+    t = tensor([[2, 3], [4, 6], [5, 7]])
+
+    # reduce all dims, (3 -> 1, 2 -> 1)
+    t_max_all = t.max()
+
+    # shape (1, 1)
+    t_max_all_expected = tensor([7])
+
+    assert_close(t_max_all[0], t_max_all_expected[0])
+
+    # check reduction along one dim
+    # shape (3, 2)
+    t = tensor([[1, 2, 3], [1, 4, 6], [1, 5, 7]])
+
+    # here 1 means reduce the 1st dim, 2 -> nothing
+    t_max_2 = t.max(1)
+
+    # shape (3)
+    t_max_2_expected = tensor([[3], [6], [7]])
+    assert t_max_2.is_close(t_max_2_expected).all().item()
 
 
 @pytest.mark.task4_4
