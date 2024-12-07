@@ -48,7 +48,7 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
 
 
 def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
-    """ "Computes average pooling given an input tensor and a kernel size"""
+    """Computes average pooling given an input tensor and a kernel size"""
     batch, channel, height, width = input.shape
     new_tensor, a, b = tile(input, kernel)
     return new_tensor.mean(dim=4).view(batch, channel, a, b)
@@ -58,7 +58,7 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
 
 
 def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
-    """ "Computes max pooling given an input tensor and a kernel size"""
+    """Computes max pooling given an input tensor and a kernel size"""
     batch, channel, height, width = input.shape
     new_tensor, a, b = tile(input, kernel)
     return new_tensor.max(dim=4).view(batch, channel, a, b)
@@ -71,13 +71,13 @@ def dropout(input: Tensor, p: float, ignore: bool = False) -> Tensor:
     return input * (rand(input.shape, input.backend) > p)
 
 
-def softmax(input: Tensor, dim=None) -> Tensor:
+def softmax(input: Tensor, dim: int | None = None) -> Tensor:
     """Applies the softmax to the input tensor along the given dimension"""
     exp = input.exp()
     return exp / exp.sum(dim)
 
 
-def logsoftmax(input: Tensor, dim=None) -> Tensor:
+def logsoftmax(input: Tensor, dim: int | None = None) -> Tensor:
     """Applies the log of the softmax to the input tensor along the given dimension"""
     exp = input.exp()
     return (exp / exp.sum(dim)).log()

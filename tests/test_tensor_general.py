@@ -70,7 +70,7 @@ def test_inv(
     t2 = -t1
     for ind in t2._tensor.indices():
         # print("idx:", ind, "mine|correct:", t2[ind], "|" , -t1[ind], "input:", t1[ind])
-        assert_close(t2[ind], -t1[ind], t1[ind])
+        assert_close(t2[ind], -t1[ind])
 
 
 @given(data())
@@ -87,7 +87,7 @@ def test_add_constant(
     t2 = t1 + 5
     for ind in t2._tensor.indices():
         # print("idx:", ind, "mine|correct:", t2[ind], "|" , t1[ind] + 5, "input:", t1[ind])
-        assert_close(t2[ind], t1[ind] + 5, t1[ind])
+        assert_close(t2[ind], t1[ind] + 5)
 
 
 @given(data())
@@ -105,7 +105,7 @@ def test_one_args(
     t2 = tensor_fn(t1)
     for ind in t2._tensor.indices():
         # print(t1[ind], t2[ind], base_fn(t1[ind]))
-        assert_close(t2[ind], base_fn(t1[ind]), t1[ind])
+        assert_close(t2[ind], base_fn(t1[ind]))
 
 
 @given(data())
